@@ -11,13 +11,14 @@ def get_files():
 
 def main():
     f = get_files()
-    finalF = []
     with open("resources/ami.csv", "w+") as csvFile:
         writer = csv.writer(csvFile)
-        for idee, tweet, stance, opinion, sentiment in f:
+        for el in f:
             if stance == "1":
-                writer.writerow([tweet, "A"]) 
+                writer.writerow([el[1], "A"])
             else:
-                writer.writerow([tweet, "TBD"])
+                writer.writerow([el[1], "TBD"])
+
+
 if __name__ == "__main__":
     main()
