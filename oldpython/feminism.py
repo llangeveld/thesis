@@ -11,12 +11,11 @@ def get_files():
 
 def main():
     f = get_files()
-    finalF = []
     with open("feminism.csv", "w+") as csvFile:
         writer = csv.writer(csvFile)
         for el in f:
             if target == "Feminist Movement":
-                writer.writerow([el[0], el[1], el[2]]) 
+                writer.writerow([el[0], el[1], el[2]])
 
 if __name__ == "__main__":
     main()

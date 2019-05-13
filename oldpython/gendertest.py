@@ -1,5 +1,4 @@
 #!/usr/bin/python3
-
 import csv
 
 with open("resources/names_annotated.csv") as f:
@@ -22,7 +21,6 @@ for name, gender in genderFile:
 
 print("Female: {0} | Male: {1} | Neutral: {2}".format(fCount, mCount, nCount))
 
-import csv
 
 def get_gender():
     with open("resources/names_annotated.csv") as f:
