@@ -39,6 +39,4 @@ def get_gender():
 
 def main():
     femaleNames, maleNames = get_gender()
-    
-
-    
+    print(femaleNames, maleNames)

@@ -14,9 +14,9 @@ def main():
     finalF = []
     with open("feminism.csv", "w+") as csvFile:
         writer = csv.writer(csvFile)
-        for tweet, target, stance, opinion, sentiment in f:
+        for el in f:
             if target == "Feminist Movement":
-                writer.writerow([tweet, target, stance]) 
+                writer.writerow([el[0], el[1], el[2]]) 
 
 if __name__ == "__main__":
     main()
