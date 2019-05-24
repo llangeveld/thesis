@@ -70,12 +70,26 @@ def main():
     random.shuffle(feminismFile)
 
     tweets, stances = two_lists(feminismFile)
-    strTweets = pre_process(tweets)
+    f = 0
+    a = 0
+    n = 0
+    for stance in stances:
+        if stance == "F":
+            f += 1
+        elif stance == "A":
+            a += 1
+        elif stance == "N":
+            n += 1
+    print("Favour: {}, Against: {}, Neutral: {}".format(f, a, n))
+    #strTweets = pre_process(tweets)
 
-    X_train, X_test, y_train, y_test = get_data(strTweets, stances)
+    #X_train, X_test, y_train, y_test = get_data(strTweets, stances)
 
-    run_tests(X_train, X_test, y_train, y_test)
+    #run_tests(X_train, X_test, y_train, y_test)
 
 
 if __name__ == "__main__":
     main()
+
+
+# NOTE : Favour = 186, Against = 513, Neutral = 250
