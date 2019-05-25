@@ -59,7 +59,7 @@ def import_data():
     genderedFile = classify_gender(femaleNames, maleNames, tweetFile) # [tweetID, tweetAuthor, tweetText, gender]
     completeFile = []
     IDS = []
-    for line in annotationFile: 
+    for line in annotationFile:
         for otherLine in genderedFile:
             if line[0] == otherLine[0] and line[0] not in IDS:
                 completeFile.append([line[0], otherLine[2], otherLine[3], line[2]])

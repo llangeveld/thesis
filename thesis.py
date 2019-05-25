@@ -2,21 +2,16 @@
 
 # ----- ALL IMPORTS ------
 import csv
-import itertools
-import random
 import re
-import pandas as pd
+import spacy
 
 from sklearn import preprocessing
 from sklearn.svm import LinearSVC
-from sklearn.base import TransformerMixin, BaseEstimator
 from sklearn.metrics import f1_score
-from sklearn.pipeline import Pipeline, FeatureUnion
+from sklearn.pipeline import FeatureUnion
 from sklearn.model_selection import train_test_split
-from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
+from sklearn.feature_extraction.text import TfidfVectorizer
 
-import spacy
-from spacy.lemmatizer import Lemmatizer
 from nltk.corpus import stopwords
 
 
