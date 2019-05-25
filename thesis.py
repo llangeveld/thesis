@@ -5,7 +5,6 @@ import csv
 import itertools
 import random
 import re
-import emoji
 import pandas as pd
 
 from sklearn import preprocessing
@@ -21,7 +20,7 @@ from spacy.lemmatizer import Lemmatizer
 from nltk.corpus import stopwords
 
 
-def pre_process(dataMT):
+def pre_processMT(dataMT):
     nlp = spacy.load('en')
     tokenized = []
     genders = []
@@ -31,7 +30,6 @@ def pre_process(dataMT):
 
     for tweetID, tweet, gender, stance, in dataMT:
         noURLS = re.sub(r"http\S+", "", tweet)
-        #demoji = emoji.demojize(noURLS)
         tweetText = nlp(noURLS.lower())
         genders.append(gender)
         stances.append(stance)
@@ -43,31 +41,86 @@ def pre_process(dataMT):
 
     return strTweets, genders, stances
 
+def pre_processF(dataF):
+    nlp = spacy.load('en')
+    tokenized = []
+    stances = []
+    strTweets = []
+    newFile = []
+
+    for line in dataF:
+        noURLS = re.sub(r"http\S+", "", line[0])
+        tweetText = nlp(noURLS.lower())
+        stances.append(line[1])
+        lemmas = []
+        for token in tweetText:
+            if token.text not in stopwords.words('english') and token.text.isalpha():
+                lemmas.append(token.lemma_)
+        strTweets.append(str(lemmas))
+
+    return strTweets, stances
+
 
 def import_data():
     with open("resources/finalData.csv") as f:
-        f = [line for line in csv.reader(f, delimiter=",")]
-    return f
-    
+        f1 = [line for line in csv.reader(f, delimiter=",")]
+    with open("resources/feminismStance.csv") as f2:
+        f3 = [line for line in csv.reader(f2, delimiter=",")]
+    return f1, f3
 
-def get_data(strTweets, genders, stances):
+
+def taskA_gender(strTweets, genders, stances):
+    le = preprocessing.LabelEncoder()
+    count_word = TfidfVectorizer(ngram_range=(1,3))
+    count_char = TfidfVectorizer(analyzer='char', ngram_range=(4,4))
+    vectorizer = FeatureUnion([('word', count_word), ('char', count_char)])
+    vectorizer.fit(strTweets)
+    genders2 = le.fit_transform(genders)
+    finalList = [str([tweet, gender]) for tweet, gender in zip(strTweets, genders2)]
+    X_train, X_test, y_train, y_test = train_test_split(finalList, stances, test_size=0.3, random_state=0)
+    y_train = le.fit_transform(y_train)
+    y_test = le.fit_transform(y_test)
+    X_train = vectorizer.transform(X_train)
+    X_test = vectorizer.transform(X_test)
+
+    print("Task A w/ gender: {}".format(run_tests(X_train, X_test, y_train, y_test)))
+
+
+def taskA(strTweets, stances, X_train, X_test, y_train, y_test):
     le = preprocessing.LabelEncoder()
     count_word = TfidfVectorizer(ngram_range=(1,3))
     count_char = TfidfVectorizer(analyzer='char', ngram_range=(4,4))
     vectorizer = FeatureUnion([('word', count_word), ('char', count_char)])
     vectorizer.fit(strTweets)
 
-    genders2 = le.fit_transform(genders)
-    finalList = [str([tweet, gender]) for tweet, gender in zip(strTweets, genders2)]
-
-    X_train, X_test, y_train, y_test = train_test_split(finalList, stances, test_size=0.3, random_state=0)
     y_train = le.fit_transform(y_train)
     y_test = le.fit_transform(y_test)
-
-    X_train = vectorizer.transform(X_train)
     X_test = vectorizer.transform(X_test)
+    X_train = vectorizer.transform(X_train)
 
-    return X_train, X_test, y_train, y_test
+    print("Task A w/o gender: {}".format(run_tests(X_train, X_test, y_train, y_test)))
+
+
+def taskB(strTweetsMT, strTweetsF, stancesF, X_test, y_test):
+    le = preprocessing.LabelEncoder()
+    count_word = TfidfVectorizer(ngram_range=(1,3))
+    count_char = TfidfVectorizer(analyzer='char', ngram_range=(4,4))
+    vectorizer = FeatureUnion([('word', count_word), ('char', count_char)])
+    vectorizer.fit(strTweetsMT + strTweetsF)
+
+    X_train = vectorizer.transform(strTweetsF)
+    y_train = le.fit_transform(stancesF)
+    X_test = vectorizer.transform(X_test)
+    y_test = le.fit_transform(y_test)
+
+    print("Task B: {}".format(run_tests(X_train, X_test, y_train, y_test)))
+    
+
+def get_data(strTweetsMT, genders, stancesMT, strTweetsF, stancesF):
+    taskA_gender(strTweetsMT, genders, stancesMT)
+    X_train, X_test, y_train, y_test = train_test_split(strTweetsMT, stancesMT, test_size=0.3, random_state=0)
+    taskA(strTweetsMT, stancesMT, X_train, X_test, y_train, y_test)
+    taskB(strTweetsMT, strTweetsF, stancesF, X_test, y_test)
 
 
 def run_tests(X_train, X_test, y_train, y_test):
@@ -75,17 +128,18 @@ def run_tests(X_train, X_test, y_train, y_test):
     svm.fit(X_train, y_train)
     predictions = svm.predict(X_test)
     f1 = f1_score(y_test, predictions, average='micro')*100
-    print("Accuracy_score: {0}".format(f1))
+    return f1
 
 
-def do_analysis(dataMT):
-    strTweets, genders, stances = pre_process(dataMT)
-    X_train, X_test, y_train, y_test = get_data(strTweets, genders, stances)
-    run_tests(X_train, X_test, y_train, y_test)
+def do_analysis(dataMT, dataF):
+    strTweetsMT, genders, stancesMT = pre_processMT(dataMT)
+    strTweetsF, stancesF = pre_processF(dataF)
+    get_data(strTweetsMT, genders, stancesMT, strTweetsF, stancesF)
+
 
 def main():
-    dataMT = import_data()  # [tweetID, tweetText, gender, stance]
-    do_analysis(dataMT)
+    dataMT, dataF = import_data()  # [tweetID, tweetText, gender, stance]
+    do_analysis(dataMT, dataF)
 
 
 if __name__ == "__main__":
