@@ -4,6 +4,7 @@
 import csv
 import re
 import spacy
+import random
 
 from sklearn import preprocessing
 from sklearn.svm import LinearSVC
@@ -15,44 +16,6 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from nltk.corpus import stopwords
 
 
-def pre_processMT(dataMT):
-    nlp = spacy.load('en')
-    genders = []
-    stances = []
-    strTweets = []
-
-    for _, tweet, gender, stance, in dataMT:
-        noURLS = re.sub(r"http\S+", "", tweet)
-        tweetText = nlp(noURLS.lower())
-        genders.append(gender)
-        stances.append(stance)
-        lemmas = []
-        for token in tweetText:
-            if token.text not in stopwords.words('english') and token.text.isalpha():
-                lemmas.append(token.lemma_)
-        strTweets.append(str(lemmas))
-
-    return strTweets, genders, stances
-
-
-def pre_processF(dataF):
-    nlp = spacy.load('en')
-    stances = []
-    strTweets = []
-
-    for line in dataF:
-        noURLS = re.sub(r"http\S+", "", line[0])
-        tweetText = nlp(noURLS.lower())
-        stances.append(line[1])
-        lemmas = []
-        for token in tweetText:
-            if token.text not in stopwords.words('english') and token.text.isalpha():
-                lemmas.append(token.lemma_)
-        strTweets.append(str(lemmas))
-
-    return strTweets, stances
-
-
 def import_data():
     with open("resources/finalData.csv") as f:
         f1 = [line for line in csv.reader(f, delimiter=",")]
@@ -61,58 +24,53 @@ def import_data():
     return f1, f3
 
 
-def taskA_gender(strTweets, genders, stances):
+def pre_process(tweets):
+    nlp = spacy.load('en')
+    strTweets = []
+
+    for tweet in tweets:
+        noURLS = re.sub(r"http\S+", "", tweet)
+        noHashtags = re.sub(r"#", "", noURLS)
+        tweetText = nlp(noHashtags.lower())
+        lemmas = []
+        for token in tweetText:
+            if token.text not in stopwords.words('english') and token.text.isalpha():
+                lemmas.append(token.lemma_)
+        strTweets.append(str(lemmas))
+
+    return strTweets
+
+
+def data_run(tweets, stances, option, genders=None, tweets2=None, stances2=None):
     le = preprocessing.LabelEncoder()
     count_word = TfidfVectorizer(ngram_range=(1,3))
     count_char = TfidfVectorizer(analyzer='char', ngram_range=(4,4))
     vectorizer = FeatureUnion([('word', count_word), ('char', count_char)])
-    vectorizer.fit(strTweets)
-    genders2 = le.fit_transform(genders)
-    finalList = [str([tweet, gender]) for tweet, gender in zip(strTweets, genders2)]
-    X_train, X_test, y_train, y_test = train_test_split(finalList, stances, test_size=0.3, random_state=0)
-    y_train = le.fit_transform(y_train)
-    y_test = le.fit_transform(y_test)
+    cutOff = int(0.7*len(tweets))
+
+    if option == "AG":
+        vectorizer.fit(tweets)
+        genders = le.fit_transform(genders)
+        fullList = [str([tweet, gender]) for tweet, gender in zip(tweets, genders)]
+        X_train, X_test, y_train, y_test = fullList[cutOff:], fullList[:cutOff], stances[cutOff:], stances[:cutOff]
+
+    elif option == "A":
+        vectorizer.fit(tweets)
+        X_train, X_test, y_train, y_test = tweets[cutOff:], tweets[:cutOff], stances[cutOff:], stances[:cutOff]
+
+
+    elif option == "B":
+        vectorizer.fit(tweets + tweets2)
+        X_train, X_test, y_train, y_test = tweets2, tweets[:cutOff], stances2, stances[:cutOff]
+
     X_train = vectorizer.transform(X_train)
     X_test = vectorizer.transform(X_test)
+    le.fit(stances)
+    y_train = le.transform(y_train)
+    y_test = le.transform(y_test)
 
-    print("Task A w/ gender: {}".format(run_tests(X_train, X_test, y_train, y_test)))
-
-
-def taskA(strTweets, stances, X_train, X_test, y_train, y_test):
-    le = preprocessing.LabelEncoder()
-    count_word = TfidfVectorizer(ngram_range=(1,3))
-    count_char = TfidfVectorizer(analyzer='char', ngram_range=(4,4))
-    vectorizer = FeatureUnion([('word', count_word), ('char', count_char)])
-    vectorizer.fit(strTweets)
-
-    y_train = le.fit_transform(y_train)
-    y_test = le.fit_transform(y_test)
-    X_test = vectorizer.transform(X_test)
-    X_train = vectorizer.transform(X_train)
-
-    print("Task A w/o gender: {}".format(run_tests(X_train, X_test, y_train, y_test)))
-
-
-def taskB(strTweetsMT, strTweetsF, stancesF, X_test, y_test):
-    le = preprocessing.LabelEncoder()
-    count_word = TfidfVectorizer(ngram_range=(1,3))
-    count_char = TfidfVectorizer(analyzer='char', ngram_range=(4,4))
-    vectorizer = FeatureUnion([('word', count_word), ('char', count_char)])
-    vectorizer.fit(strTweetsMT + strTweetsF)
-
-    X_train = vectorizer.transform(strTweetsF)
-    y_train = le.fit_transform(stancesF)
-    X_test = vectorizer.transform(X_test)
-    y_test = le.fit_transform(y_test)
-
-    print("Task B: {}".format(run_tests(X_train, X_test, y_train, y_test)))
-
-
-def get_data(strTweetsMT, genders, stancesMT, strTweetsF, stancesF):
-    taskA_gender(strTweetsMT, genders, stancesMT)
-    X_train, X_test, y_train, y_test = train_test_split(strTweetsMT, stancesMT, test_size=0.3, random_state=0)
-    taskA(strTweetsMT, stancesMT, X_train, X_test, y_train, y_test)
-    taskB(strTweetsMT, strTweetsF, stancesF, X_test, y_test)
+    f1 = run_tests(X_train, X_test, y_train, y_test)
+    return f1
 
 
 def run_tests(X_train, X_test, y_train, y_test):
@@ -123,27 +81,36 @@ def run_tests(X_train, X_test, y_train, y_test):
     return f1
 
 
-def do_analysis(dataMT, dataF):
-    strTweetsMT, genders, stancesMT = pre_processMT(dataMT)
-    strTweetsF, stancesF = pre_processF(dataF)
-    get_data(strTweetsMT, genders, stancesMT, strTweetsF, stancesF)
-
-
 def main():
-    dataMT, dataF = import_data()  # [tweetID, tweetText, gender, stance]
-    do_analysis(dataMT, dataF)
+    dataMT, dataF = import_data()
+    random.shuffle(dataMT)
+
+    tweetsMT = []
+    genders = []
+    stancesMT = []
+    for _, tweet, gender, stance in dataMT:
+        tweetsMT.append(tweet)
+        genders.append(gender)
+        stancesMT.append(stance)
+
+    tweetsF = []
+    stancesF = []
+    for tweet, stance in dataF:
+        tweetsF.append(tweet)
+        stancesF.append(stance)
+
+    tweetsMT = pre_process(tweetsMT)
+    tweetsF = pre_process(tweetsF)
+
+    taskAG = data_run(tweetsMT, stancesMT, "AG", genders=genders)
+    taskA = data_run(tweetsMT, stancesMT, "A")
+    taskB = data_run(tweetsMT, stancesMT, "B", tweets2=tweetsF, stances2=stancesF)
+
+    print("Task A w/ gender: {}".format(taskAG))
+    print("Task A w/o gender: {}". format(taskA))
+    print("Task B: {}".format(taskB))
+
 
 
 if __name__ == "__main__":
     main()
-
-
-"""
-NOTES:
-Favour = 406, Neutral = 348, Against = 122
-Female = 497, Male = 379
-
-fF = 250, fA = 59, fN = 188
-mF = 156, mA = 63, mN = 160
-h_stack 
-"""
