@@ -57,7 +57,8 @@ def get_data(strTweets, genders, stances):
     vectorizer = FeatureUnion([('word', count_word), ('char', count_char)])
     vectorizer.fit(strTweets)
 
-    finalList = [[tweet, gender] for tweet, gender in zip(strTweets, genders)]
+    genders2 = le.fit_transform(genders)
+    finalList = [str([tweet, gender]) for tweet, gender in zip(strTweets, genders2)]
 
     X_train, X_test, y_train, y_test = train_test_split(finalList, stances, test_size=0.3, random_state=0)
     y_train = le.fit_transform(y_train)
