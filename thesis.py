@@ -17,13 +17,11 @@ from nltk.corpus import stopwords
 
 def pre_processMT(dataMT):
     nlp = spacy.load('en')
-    tokenized = []
     genders = []
     stances = []
     strTweets = []
-    newFile = []
 
-    for tweetID, tweet, gender, stance, in dataMT:
+    for _, tweet, gender, stance, in dataMT:
         noURLS = re.sub(r"http\S+", "", tweet)
         tweetText = nlp(noURLS.lower())
         genders.append(gender)
@@ -36,12 +34,11 @@ def pre_processMT(dataMT):
 
     return strTweets, genders, stances
 
+
 def pre_processF(dataF):
     nlp = spacy.load('en')
-    tokenized = []
     stances = []
     strTweets = []
-    newFile = []
 
     for line in dataF:
         noURLS = re.sub(r"http\S+", "", line[0])
@@ -109,7 +106,7 @@ def taskB(strTweetsMT, strTweetsF, stancesF, X_test, y_test):
     y_test = le.fit_transform(y_test)
 
     print("Task B: {}".format(run_tests(X_train, X_test, y_train, y_test)))
-    
+
 
 def get_data(strTweetsMT, genders, stancesMT, strTweetsF, stancesF):
     taskA_gender(strTweetsMT, genders, stancesMT)
