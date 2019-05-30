@@ -5,11 +5,13 @@ import csv
 import re
 import spacy
 import random
+import pandas as pd
 
 from sklearn import preprocessing
 from sklearn.svm import LinearSVC
 from sklearn.metrics import f1_score
 from sklearn.pipeline import FeatureUnion
+from sklearn.compose import ColumnTransformer
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 from nltk.corpus import stopwords
@@ -35,8 +37,6 @@ def pre_process(tweets):
         for token in tweetText:
             if not token.is_stop and token.text.isalpha():
                 lemmas.append(token.lemma_)
-        print(tweet)
-        print(lemmas, "\n")
         strTweets.append(str(lemmas))
 
     return strTweets
@@ -50,10 +50,13 @@ def data_run(tweets, stances, option, genders=None, tweets2=None, stances2=None)
     cutOff = int(0.7*len(tweets))
 
     if option == "AG":
-        vectorizer.fit(tweets+genders)
-        genders = le.fit_transform(genders)
-        fullList = [str([tweet, gender]) for tweet, gender in zip(tweets, genders)]
-        X_train, X_test, y_train, y_test = fullList[cutOff:], fullList[:cutOff], stances[cutOff:], stances[:cutOff]
+        d = {'tweet':tweets, 'gender':genders}
+        df = pd.DataFrame(d)
+        ct = ColumnTransformer(
+            [('vec', vectorizer, 'tweet'),
+            ('lab', le, 'gender')])
+        X_features = ct.fit_transform(df)
+        X_train, X_test, y_train, y_test = X_features[cutOff:], X_features[:cutOff], stances[cutOff:], stances[:cutOff]
 
     elif option == "A":
         vectorizer.fit(tweets)
