@@ -6,6 +6,7 @@ import re
 import spacy
 import random
 import pandas as pd
+import numpy as np
 
 from sklearn import preprocessing
 from sklearn.svm import LinearSVC
@@ -15,6 +16,8 @@ from sklearn.compose import ColumnTransformer
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 from nltk.corpus import stopwords
+from numpy import hstack as nhstack
+from scipy.sparse import hstack as shstack
 
 
 def import_data():
@@ -50,25 +53,29 @@ def data_run(tweets, stances, option, genders=None, tweets2=None, stances2=None)
     cutOff = int(0.7*len(tweets))
 
     if option == "AG":
-        d = {'tweet':tweets, 'gender':genders}
-        df = pd.DataFrame(d)
-        ct = ColumnTransformer(
-            [('vec', vectorizer, 'tweet'),
-            ('lab', le, 'gender')])
-        X_features = ct.fit_transform(df)
-        X_train, X_test, y_train, y_test = X_features[cutOff:], X_features[:cutOff], stances[cutOff:], stances[:cutOff]
+        genders_v = le.fit_transform(genders)
+        print(genders_v.shape)
+        tweets_wv = count_word.fit_transform(tweets)
+        print(tweets_wv.shape)
+        tweets_cv = count_char.fit_transform(tweets)
+        print(tweets_cv.shape)
 
+        concat = shstack([tweets_cv, tweets_wv, genders_v])
+
+        X_train, X_test, y_train, y_test = concat[cutOff:], concat[:cutOff], stances[cutOff:], stances[:cutOff]
     elif option == "A":
         vectorizer.fit(tweets)
         X_train, X_test, y_train, y_test = tweets[cutOff:], tweets[:cutOff], stances[cutOff:], stances[:cutOff]
+        X_train, X_test = vectorizer.transform(X_train), vectorizer.transform(X_test)
 
 
     elif option == "B":
         vectorizer.fit(tweets + tweets2)
         X_train, X_test, y_train, y_test = tweets2, tweets[:cutOff], stances2, stances[:cutOff]
+        X_train, X_test = vectorizer.transform(X_train), vectorizer.transform(X_test)
 
-    X_train = vectorizer.transform(X_train)
-    X_test = vectorizer.transform(X_test)
+    #X_train = vectorizer.transform(X_train)
+    #X_test = vectorizer.transform(X_test)
     le.fit(stances)
     y_train = le.transform(y_train)
     y_test = le.transform(y_test)
