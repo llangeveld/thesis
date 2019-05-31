@@ -4,7 +4,6 @@
 import csv
 import re
 import spacy
-import random
 import numpy as np
 
 from sklearn import preprocessing
@@ -13,10 +12,11 @@ from sklearn.metrics import f1_score
 from sklearn.pipeline import FeatureUnion
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-from scipy.sparse import hstack
+from scipy.sparse import hstack, coo_matrix
 
 
 def import_data():
+    """Returns #MeToo training- and testing files, and the feminism file."""
     with open("resources/train.csv") as thing:
         f1 = [line for line in csv.reader(thing, delimiter=",")]
     with open("resources/feminismStance.csv") as thing2:
@@ -27,6 +27,7 @@ def import_data():
 
 
 def get_data(data):
+    """Takes a list and returns the differents elements (tweets, genders, stances"""
     tweets = []
     genders = []
     stances = []
@@ -50,38 +51,35 @@ def pre_process(tweets):
         for token in tweetText:
             if not token.is_stop and token.text.isalpha():
                 lemmas.append(token.lemma_)
-        strTweets.append(''.join(lemmas))
+        strTweets.append(' '.join(lemmas))
 
     return strTweets
 
 
 def data_run(trainTweets, trainStances, testTweets, testStances, option, trainGenders=None, testGenders=None):
-    le = preprocessing.LabelEncoder()
+    print("## Running vectorizer...")
     count_word = TfidfVectorizer(ngram_range=(1,3))
     count_char = TfidfVectorizer(analyzer='char', ngram_range=(4,4))
     vectorizer = FeatureUnion([('word', count_word), ('char', count_char)])
-    print("## Running vectorizer...")
-    vectorizer.fit(trainTweets+testTweets)
+    vectorizer.fit(trainTweets)
+    trainTweets = vectorizer.transform(trainTweets)
+    testTweets = vectorizer.transform(testTweets)
 
     if option == "AG":
         le2 = preprocessing.LabelEncoder()
-        le2.fit(trainGenders+testGenders)
+        le2.fit(trainGenders)
         trainGenders = le2.transform(trainGenders)
         testGenders = le2.transform(testGenders)
-        trainTweets = vectorizer.transform(trainTweets)
-        testTweets = vectorizer.transform(testTweets)
-        trainList = hstack([trainTweets, newTG])
-        testList = [str([tweet, gender]) for tweet, gender in zip(testTweets, testGenders)]
-        trainTweets = trainList.copy()
-        testTweets = testList.copy()
+        trainTweets = coo_matrix(trainTweets)
+        testTweets = coo_matrix(testTweets)
+        stackedTrain = hstack((trainTweets, trainGenders))
+        trainTweets = stackedTrain.copy()
 
     print("## Fitting stances...")
-    le.fit(trainStances + testStances)
+    le = preprocessing.LabelEncoder()
+    le.fit(trainStances)
     trainStances = le.transform(trainStances)
     testStances = le.transform(testStances)
-
-    #trainTweets = vectorizer.transform(trainTweets)
-    #testTweets = vectorizer.transform(testTweets)
 
     f1 = run_tests(trainTweets, testTweets, trainStances, testStances)
     return f1
@@ -98,7 +96,6 @@ def run_tests(X_train, X_test, y_train, y_test):
 def main():
     print("# Importing data...")
     dataTrain, dataTest, dataF = import_data()
-    
     trainTweets, trainGenders, trainStances = get_data(dataTrain)
     testTweets, testGenders, testStances = get_data(dataTest)
 
