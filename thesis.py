@@ -45,21 +45,27 @@ def pre_process(tweets):
 
     for tweet in tweets:
         noURLS = re.sub(r"http\S+", "", tweet)
-        #noHashtags = re.sub(r"#", "", noURLS)
-        tweetText = nlp(tweet.lower())
+        noHashtags = re.sub(r"#", "", noURLS)
+        tweetText = nlp(noHashtags.lower())
         lemmas = []
         for token in tweetText:
-            if not token.is_stop and token.text.isalpha():
-                lemmas.append(token.lemma_)
+            lemmas.append(token.lemma_)
         strTweets.append(' '.join(lemmas))
 
     return strTweets
 
 
+def transform_tg(tweets, genders, le):
+    genders = le.transform(genders)
+    genders = np.reshape(genders, (-1,1))
+    tweets = coo_matrix(tweets)
+    stacked = hstack((tweets, genders))
+    return stacked
+
+
 def data_run(trainTweets, trainStances, testTweets, testStances, option, trainGenders=None, testGenders=None):
-    print("## Running vectorizer...")
-    count_word = TfidfVectorizer(ngram_range=(1,3))
-    count_char = TfidfVectorizer(analyzer='char', ngram_range=(4,4))
+    count_word = TfidfVectorizer(ngram_range=(3,3))
+    count_char = TfidfVectorizer(analyzer='char', ngram_range=(2,3))
     vectorizer = FeatureUnion([('word', count_word), ('char', count_char)])
     vectorizer.fit(trainTweets)
     trainTweets = vectorizer.transform(trainTweets)
@@ -68,14 +74,9 @@ def data_run(trainTweets, trainStances, testTweets, testStances, option, trainGe
     if option == "AG":
         le2 = preprocessing.LabelEncoder()
         le2.fit(trainGenders)
-        trainGenders = le2.transform(trainGenders)
-        testGenders = le2.transform(testGenders)
-        trainTweets = coo_matrix(trainTweets)
-        testTweets = coo_matrix(testTweets)
-        stackedTrain = hstack((trainTweets, trainGenders))
-        trainTweets = stackedTrain.copy()
+        trainTweets = transform_tg(trainTweets, trainGenders, le2)
+        testTweets = transform_tg(testTweets, testGenders, le2)
 
-    print("## Fitting stances...")
     le = preprocessing.LabelEncoder()
     le.fit(trainStances)
     trainStances = le.transform(trainStances)
