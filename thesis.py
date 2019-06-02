@@ -44,12 +44,13 @@ def pre_process(tweets):
     strTweets = []
 
     for tweet in tweets:
+        print(tweet)
         noURLS = re.sub(r"http\S+", "", tweet)
-        noHashtags = re.sub(r"#", "", noURLS)
-        tweetText = nlp(noHashtags.lower())
+        tweetText = nlp(noURLS.lower())
         lemmas = []
         for token in tweetText:
             lemmas.append(token.lemma_)
+        print(' '.join(lemmas), "\n")
         strTweets.append(' '.join(lemmas))
 
     return strTweets
