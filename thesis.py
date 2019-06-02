@@ -69,28 +69,31 @@ def transform_tg(tweets, genders, le):
     :param le: the gender's LabelEncoder
     :return: The combined gender + tweet-features"""
     genders = le.transform(genders)
-    genders = np.reshape(genders, (-1,1))
+    genders = np.reshape(genders, (-1, 1))
     tweets = coo_matrix(tweets)
     stacked = hstack((tweets, genders))
     return stacked
 
 
-def data_run(trainTweets, trainStances, testTweets, testStances, option, trainGenders=None, testGenders=None):
+def data_run(trainTweets, trainStances, testTweets, testStances,
+             option, trainGenders=None, testGenders=None):
     """Prepares the data for actual running, and sends the data through to
     the linear SVC.
     :param trainTweets: A list of strings
-    :param trainStances: A list of strings (all items being eiter 'F', 'N' or 'A')
+    :param trainStances: A list of strings
+    (all items being eiter 'F', 'N' or 'A')
     :param testTweets: see trainTweets
     :param testStances: see trainStances
     :param option: A string to see what test is being run
-    :param trainGenders: An optional list of strings (all items being either 'F' or 'M'),
+    :param trainGenders: An optional list of strings
+    (all items being either 'F' or 'M'),
     only if option == 'AG'
     :param testGenders: see trainGenders
     :return: the F1-score for the run test"""
 
     # Vectorizer
-    count_word = TfidfVectorizer(ngram_range=(3,3))
-    count_char = TfidfVectorizer(analyzer='char', ngram_range=(2,3))
+    count_word = TfidfVectorizer(ngram_range=(3, 3))
+    count_char = TfidfVectorizer(analyzer='char', ngram_range=(2, 3))
     vectorizer = FeatureUnion([('word', count_word), ('char', count_char)])
     vectorizer.fit(trainTweets)
     trainTweets = vectorizer.transform(trainTweets)
@@ -146,17 +149,17 @@ def main():
     tweetsF = pre_process(tweetsF)
 
     print("# Running task AG...")
-    taskAG = data_run(trainTweets, trainStances, testTweets, testStances, "AG", trainGenders=trainGenders, testGenders=testGenders)
+    taskAG = data_run(trainTweets, trainStances, testTweets, testStances,
+                      "AG", trainGenders=trainGenders, testGenders=testGenders)
     print("# Running task A...")
-    taskA = data_run(trainTweets, trainStances, testTweets, testStances,"A")
+    taskA = data_run(trainTweets, trainStances, testTweets, testStances, "A")
     print("# Running task B...")
-    taskB = data_run(tweetsF, stancesF, testTweets, testStances,"B")
+    taskB = data_run(tweetsF, stancesF, testTweets, testStances, "B")
 
     print("\nResults:")
     print("Task A w/ gender: {}".format(taskAG))
     print("Task A w/o gender: {}". format(taskA))
     print("Task B: {}".format(taskB))
-
 
 
 if __name__ == "__main__":
